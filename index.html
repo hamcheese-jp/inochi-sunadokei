@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="年齢を入れてスタート。残り時間が、砂と秒数で落ちていく。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://hamcheese-jp.github.io/inochi-sunadokei/">
+<meta property="og:title" content="命の砂時計 — あなたの人生、のこり何秒？">
+<meta property="og:description" content="年齢を入れてスタート。残り時間が、砂と秒数で落ちていく。">
+<meta property="og:image" content="https://hamcheese-jp.github.io/inochi-sunadokei/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://hamcheese-jp.github.io/inochi-sunadokei/">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14110d">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="命の砂時計">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>命の砂時計 / Hourglass of Life</title>
+<style>
+  :root {
+    --bg: #f3ede2; --card: #fffaf0; --ink: #2b2620; --muted: #8a7f70; --line: #d9cdb8; --accent: #8c4a2f; --sel: #d6a24a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14110d; --card: #1f1a14; --ink: #efe6d6; --muted: #a39682; --line: #3b3328; --accent: #e08a62; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", Georgia, serif;
+    display: flex; align-items: center; justify-content: center; padding: 56px 16px 32px; }
+  .wrap { width: 100%; max-width: 460px; text-align: center; }
+  .lang { position: fixed; top: 12px; right: 12px; display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; z-index: 5; }
+  .lang button { width: auto; margin: 0; padding: 6px 12px; font-size: .78rem; letter-spacing: .05em; border-radius: 0;
+    background: transparent; color: var(--muted); }
+  .lang button.on { background: var(--ink); color: var(--bg); }
+  .snd { position: fixed; top: 12px; left: 12px; width: auto; margin: 0; padding: 6px 14px; font-size: .78rem;
+    letter-spacing: .05em !important; border-radius: 999px; background: transparent; color: var(--muted); border: 1px solid var(--line); z-index: 5; }
+  .snd.on { background: var(--ink); color: var(--bg); }
+  h1 { font-size: 1.6rem; letter-spacing: .3em; margin: 0 0 4px; font-weight: 600; }
+  html[lang="en"] h1 { letter-spacing: .08em; }
+  .sub { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px 20px; }
+  label { display: block; text-align: left; font-size: .85rem; color: var(--muted); margin: 14px 0 6px; }
+  input { width: 100%; font: inherit; font-size: 1.05rem; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  input:focus { outline: 2px solid var(--sel); outline-offset: 1px; }
+  .row { display: flex; gap: 12px; } .row > div { flex: 1; }
+  .err { color: var(--accent); font-size: .85rem; min-height: 1.2em; margin-top: 12px; }
+  button { font: inherit; font-size: 1.1rem; letter-spacing: .2em; width: 100%; margin-top: 8px; padding: 14px;
+    border: none; border-radius: 12px; background: var(--ink); color: var(--bg); cursor: pointer; }
+  html[lang="en"] button { letter-spacing: .05em; }
+  button:hover { opacity: .88; }
+  button:disabled { opacity: .5; cursor: wait; }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .link { background: none; border: none; color: var(--muted); font-size: .85rem; letter-spacing: .05em !important;
+    text-decoration: underline; width: auto; padding: 6px; margin-top: 14px; }
+  .note { font-size: .78rem; color: var(--muted); margin-top: 14px; line-height: 1.6; }
+  .hidden { display: none !important; }
+  .loading { color: var(--muted); letter-spacing: .2em; animation: blink 1.6s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  .name { font-size: 1.15rem; margin-bottom: 2px; }
+  .range { color: var(--muted); font-size: .85rem; }
+  canvas#glass, canvas#endGlass { width: 240px; height: 360px; display: block; margin: 10px auto 14px; }
+  .secs { font-family: "SF Mono", "Consolas", "Menlo", monospace; font-variant-numeric: tabular-nums;
+    font-size: clamp(1.35rem, 6.6vw, 2.1rem); letter-spacing: .01em; margin-top: 4px; white-space: nowrap; }
+  .secs .ms { color: var(--muted); }
+  .secs .u { font-family: inherit; font-size: .5em; color: var(--muted); margin-left: 4px; }
+  .detail { font-size: .9rem; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .stat { border: 1px solid var(--line); border-radius: 10px; padding: 10px 8px; }
+  .stat.wide { grid-column: 1 / -1; }
+  .stat .k { font-size: .72rem; color: var(--muted); }
+  .stat .v { font-size: .95rem; font-variant-numeric: tabular-nums; margin-top: 2px; word-break: break-all; }
+  .code { font-family: "SF Mono", "Consolas", "Menlo", monospace; font-size: 1.2rem !important; letter-spacing: .15em; }
+  .small { width: auto; font-size: .78rem; letter-spacing: .05em !important; padding: 6px 14px; margin: 6px 4px 0; border-radius: 8px; }
+
+  .reset { margin-top: 28px; padding-top: 16px; border-top: 1px dashed var(--line); font-size: .85rem; color: var(--muted); }
+  .reset .wait { font-variant-numeric: tabular-nums; }
+  .hold { position: relative; overflow: hidden; background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    font-size: .9rem; letter-spacing: .05em !important; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .hold::before { content: ""; position: absolute; inset: 0; width: var(--p, 0%); background: var(--accent); opacity: .22; }
+
+  .end h2 { font-size: 2rem; letter-spacing: .3em; font-weight: 500; margin: 28px 0 12px; animation: fade 3s ease; }
+  .end .shareBtn { animation: fade 6s ease; }
+  html[lang="en"] .end h2 { letter-spacing: .04em; font-size: 1.7rem; }
+  .end p { color: var(--muted); animation: fade 5s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .shareBtn { margin-top: 18px; }
+  .shareImg { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; margin-bottom: 8px; }
+  .shareCard { max-height: 92vh; overflow-y: auto; }
+  .btnRow { display: flex; gap: 8px; } .btnRow button { margin-top: 8px; font-size: .9rem; letter-spacing: .03em !important; padding: 12px 6px; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .modal .card { max-width: 380px; width: 100%; }
+  .modal p { line-height: 1.8; margin: 0 0 16px; }
+</style>
+</head>
+<body>
+<button class="snd" id="sndBtn"></button>
+<div class="lang" role="group" aria-label="Language">
+  <button data-lang="ja">日本語</button><button data-lang="en">EN</button>
+</div>
+
+<div class="wrap">
+  <section id="loading"><div class="loading" data-t="loading"></div></section>
+
+  <section id="setup" class="hidden">
+    <h1 data-t="title"></h1>
+    <div class="sub" data-t="tagline"></div>
+    <div class="card" id="newCard">
+      <label for="nick" data-t="nick"></label>
+      <input id="nick" maxlength="20" data-ph="nickPh">
+      <div class="row">
+        <div>
+          <label for="now" data-t="nowAge"></label>
+          <input id="now" type="number" min="0" max="149" inputmode="numeric" placeholder="40">
+        </div>
+        <div>
+          <label for="goal" data-t="goalAge"></label>
+          <input id="goal" type="number" min="1" max="150" inputmode="numeric" placeholder="85">
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+      <button id="startBtn" data-t="start"></button>
+      <div class="note" data-t="noteStart"></div>
+    </div>
+    <div class="card hidden" id="restoreCard">
+      <label for="codeIn" data-t="code"></label>
+      <input id="codeIn" maxlength="9" placeholder="ABCD-EFGH" autocapitalize="characters" autocomplete="off">
+      <div class="err" id="rErr"></div>
+      <button id="restoreBtn" data-t="restore"></button>
+    </div>
+    <button class="link" id="toggleRestore"></button>
+  </section>
+
+  <section id="run" class="hidden">
+    <div class="name" id="rName"></div>
+    <div class="range" id="rRange"></div>
+    <canvas id="glass" width="240" height="360"></canvas>
+    <div class="range" data-t="remaining"></div>
+    <div class="secs"><span id="sInt">0</span><span class="ms" id="sMs">.000</span><span class="u" data-t="unitSec"></span></div>
+    <div class="detail" id="rDetail"></div>
+    <div class="stats">
+      <div class="stat"><div class="k" data-t="sand"></div><div class="v" id="sPct"></div></div>
+      <div class="stat"><div class="k" data-t="past"></div><div class="v" id="sPast"></div></div>
+      <div class="stat"><div class="k" data-t="startDate"></div><div class="v" id="sStart"></div></div>
+      <div class="stat"><div class="k" data-t="endDate"></div><div class="v" id="sEnd"></div></div>
+      <div class="stat wide">
+        <div class="k" data-t="codeNote"></div>
+        <div class="v code" id="sCode"></div>
+        <button class="ghost small" id="copyBtn" data-t="copy"></button>
+      </div>
+    </div>
+
+    <button class="shareBtn" id="shareBtn" data-t="share"></button>
+
+    <div class="reset">
+      <div id="rsIdle"><button class="link" id="rsReqBtn" data-t="resetLink"></button></div>
+      <div id="rsWait" class="hidden">
+        <div class="wait" id="rsWaitText"></div>
+        <button class="ghost small" id="rsCancelBtn" data-t="cancelReset"></button>
+      </div>
+      <div id="rsReady" class="hidden">
+        <div data-t="resetReady"></div>
+        <button class="hold" id="rsHoldBtn" data-t="holdReset"></button>
+        <button class="ghost small" id="rsCancelBtn2" data-t="cancelReset"></button>
+      </div>
+      <div class="err" id="rsErr"></div>
+    </div>
+  </section>
+
+  <div id="appLinks" class="hidden">
+    <button class="link hidden" id="installBtn" data-t="install"></button>
+    <button class="link hidden" id="migrateBtn" data-t="migrate"></button>
+  </div>
+
+  <section id="end" class="end hidden">
+    <canvas id="endGlass" width="240" height="360"></canvas>
+    <div class="range" data-t="remaining"></div>
+    <div class="secs"><span>0</span><span class="ms">.000</span><span class="u" data-t="unitSec"></span></div>
+    <h2 data-t="endTitle"></h2>
+    <p id="eName"></p>
+    <button class="shareBtn" id="endShareBtn" data-t="share"></button>
+  </section>
+</div>
+
+<div class="modal hidden" id="modal">
+  <div class="card">
+    <p id="mMsg"></p>
+    <button id="mOk"></button>
+    <button class="ghost" id="mBack" data-t="back"></button>
+  </div>
+</div>
+
+<div class="modal hidden" id="shareModal">
+  <div class="card shareCard">
+    <img class="shareImg" id="shareImg" alt="">
+    <div class="note" data-t="sharePrivacy" style="margin-top:0"></div>
+    <button id="shNative" data-t="shareNative"></button>
+    <div class="btnRow">
+      <button class="ghost" id="shX" data-t="shareX"></button>
+      <button class="ghost" id="shSave" data-t="shareSave"></button>
+    </div>
+    <div class="btnRow">
+      <button class="ghost" id="shCopy" data-t="shareCopy"></button>
+      <button class="ghost" id="shClose" data-t="close"></button>
+    </div>
+    <div class="note" data-t="shareHint"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- ことば（日本語 / English） ---------- */
+const I18N = {
+  ja: {
+    title: "命の砂時計", tagline: "残された時間を、ひと粒ずつ。", loading: "読み込み中…",
+    nick: "ニックネーム", nickPh: "例：たろう", nowAge: "現在の年齢", goalAge: "何歳まで", start: "スタート",
+    noteStart: "※ スタートしたら、すぐにはリセットできません（申し込みから{h}時間後に可能）。",
+    code: "引き継ぎコード", restore: "続きから", toRestore: "引き継ぎコードで続きから", toNew: "新しく始める",
+    remaining: "のこり", unitSec: "秒", sand: "砂の残り", past: "過ぎた時間", startDate: "スタート日", endDate: "終わりの日",
+    codeNote: "引き継ぎコード（機種変更や別の端末で続きを見るときに使います）",
+    copy: "コピー", copied: "コピーしました", copyFail: "長押しでコピーしてください",
+    endTitle: "お疲れ様でした", back: "もどる", begin: "はじめる", saving: "記録中…",
+    who: n => `${n} さん`, ageRange: (a, b) => `${a}歳 → ${b}歳`,
+    detail: (y, d, hms) => `${y}年 ${d}日 ${hms}`, pastSec: s => `${s}秒`,
+    confirmStart: (n, a, b) => `${n} さん、${a}歳 → ${b}歳。<br>のこり <b>${b - a}年</b> の砂時計をスタートします。<br><br><b>スタート後、すぐにはリセットできません。</b>`,
+    resetLink: "リセット…", requestBtn: "申し込む",
+    confirmReset: h => `リセットを申し込みますか？<br><br>申し込みから <b>${h}時間後</b> にリセットできるようになります。それまでは取り消せます。`,
+    resetWaiting: t => `リセットできるまで あと ${t}`, cancelReset: "申し込みを取り消す",
+    resetReady: "リセットできます。", holdReset: "長押しでリセット（3秒）",
+    errNick: "ニックネームを入れてください", errNow: "現在の年齢を整数で入れてください",
+    errGoalInt: "何歳までかを整数で入れてください", errGoalGt: "「何歳まで」は現在の年齢より大きくしてください",
+    errGoalMax: "150歳までにしてください", errCode8: "8文字のコードを入れてください",
+    errCodeNF: "そのコードの記録は見つかりませんでした", errNet: "通信できませんでした。時間をおいて開き直してください",
+    errFail: "うまくいきませんでした", NOT_FOUND: "記録が見つかりません", TOO_EARLY: "まだリセットできません",
+    BAD_INPUT: "入力内容を確認してください", BAD_ID: "端末IDが不正です", CODE_FAIL: "もう一度お試しください",
+    BUSY: "混み合っています。少し時間をおいてもう一度お試しください",
+    soundOn: "♪ 音 ON", soundOff: "♪ 音 OFF",
+    install: "📲 ホーム画面に置く", migrate: "📲 帯のないアプリ版にうつる（記録はそのまま）",
+    installHow: code => `<b>iPhone</b>：Safari の共有ボタン（□↑）→「ホーム画面に追加」<br><b>Android</b>：Chrome のメニュー（︙）→「ホーム画面に追加」`
+      + (code ? `<br><br>ホーム画面のアプリは記録が別になります。開いたら「引き継ぎコードで続きから」に <b>${code}</b> を入れてください。` : ""),
+    share: "SNSでシェア", shareNative: "シェアする", shareX: "Xに投稿", shareSave: "画像を保存",
+    shareCopy: "文章をコピー", close: "閉じる", copiedShort: "コピーしました",
+    sharePrivacy: "画像と文章には、残りの時間と砂時計だけが入ります（名前・年齢・日付は入りません）。",
+    shareHint: "保存できないときは、画像を長押しして保存してください。Xには画像を添付して投稿してください。",
+    shareText: s => `命の砂時計｜のこり ${s} 秒`, shareTag: "#命の砂時計",
+    shareEndText: "命の砂時計｜砂が、すべて落ちきりました。のこり 0.000 秒。お疲れ様でした",
+    imgTitle: "命 の 砂 時 計", imgLeft: "の こ り", imgSec: "秒", fileName: "命の砂時計.png"
+  },
+  en: {
+    title: "Hourglass of Life", tagline: "Your remaining time, grain by grain.", loading: "Loading…",
+    nick: "Nickname", nickPh: "e.g. Alex", nowAge: "Current age", goalAge: "Live until age", start: "Start",
+    noteStart: "Once started, you can't reset right away (reset becomes available {h} hours after you request it).",
+    code: "Transfer code", restore: "Continue", toRestore: "Continue with a transfer code", toNew: "Start new",
+    remaining: "Remaining", unitSec: "sec", sand: "Sand left", past: "Time passed", startDate: "Started", endDate: "Ends",
+    codeNote: "Transfer code (use it to continue on another device)",
+    copy: "Copy", copied: "Copied", copyFail: "Press and hold to copy",
+    endTitle: "Thank you for all your hard work", back: "Back", begin: "Begin", saving: "Saving…",
+    who: n => n, ageRange: (a, b) => `Age ${a} → ${b}`,
+    detail: (y, d, hms) => `${y}y ${d}d ${hms}`, pastSec: s => `${s} sec`,
+    confirmStart: (n, a, b) => `${n}, age ${a} → ${b}.<br>Start an hourglass with <b>${b - a} years</b> of sand.<br><br><b>Once started, you can't reset right away.</b>`,
+    resetLink: "Reset…", requestBtn: "Request reset",
+    confirmReset: h => `Request a reset?<br><br>You'll be able to reset <b>${h} hours</b> after requesting. You can cancel until then.`,
+    resetWaiting: t => `Reset available in ${t}`, cancelReset: "Cancel request",
+    resetReady: "You can reset now.", holdReset: "Hold to reset (3 sec)",
+    errNick: "Please enter a nickname", errNow: "Enter your current age as a whole number",
+    errGoalInt: "Enter the target age as a whole number", errGoalGt: "Target age must be greater than your current age",
+    errGoalMax: "Target age must be 150 or less", errCode8: "Enter the 8-character code",
+    errCodeNF: "No record found for that code", errNet: "Couldn't connect. Please try again later",
+    errFail: "Something went wrong", NOT_FOUND: "Record not found", TOO_EARLY: "You can't reset yet",
+    BAD_INPUT: "Please check your input", BAD_ID: "Invalid device ID", CODE_FAIL: "Please try again",
+    BUSY: "It's busy right now. Please try again in a moment",
+    soundOn: "♪ Sound ON", soundOff: "♪ Sound OFF",
+    install: "📲 Add to Home Screen", migrate: "📲 Move to the app version without the banner (keeps your record)",
+    installHow: code => `<b>iPhone</b>: Safari Share button (□↑) → "Add to Home Screen"<br><b>Android</b>: Chrome menu (︙) → "Add to Home screen"`
+      + (code ? `<br><br>The home-screen app keeps its own data. After opening it, choose "Continue with a transfer code" and enter <b>${code}</b>.` : ""),
+    share: "Share on social media", shareNative: "Share", shareX: "Post on X", shareSave: "Save image",
+    shareCopy: "Copy text", close: "Close", copiedShort: "Copied",
+    sharePrivacy: "Only your remaining time and the hourglass are included (no name, age, or dates).",
+    shareHint: "If saving doesn't work, press and hold the image to save it. On X, attach the image to your post.",
+    shareText: s => `Hourglass of Life | ${s} seconds left`, shareTag: "#HourglassOfLife",
+    shareEndText: "Hourglass of Life | All the sand has fallen. 0.000 seconds left. Thank you for all your hard work",
+    imgTitle: "Hourglass of Life", imgLeft: "REMAINING", imgSec: "sec", fileName: "hourglass-of-life.png"
+  }
+};
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+let lang = lsGet("inochi-lang") || ((navigator.language || "").toLowerCase().startsWith("ja") ? "ja" : "en");
+const t = k => I18N[lang][k];
+const errText = e => { const m = String(e && e.message ? e.message : e); const k = Object.keys(I18N.ja).find(x => /^[A-Z_]+$/.test(x) && m.includes(x)); return k ? t(k) : t("errFail"); };
+
+/* ---------- サーバー（スプレッドシート）との通信 ---------- */
+// Apps Script 上では google.script.run を使う。それ以外（ローカル確認用）はブラウザ内の仮データで動く。
+const onGas = !!(window.google && google.script && google.script.run);
+const mock = {
+  wait() { return Number(lsGet("mock-wait")) || 24 * 3600 * 1000; },
+  db() { try { return JSON.parse(lsGet("mock-db")) || []; } catch (e) { return []; } },
+  put(rows) { lsSet("mock-db", JSON.stringify(rows)); },
+  out(r) { return { record: r ? { ...r, resetWait: this.wait() } : null, serverNow: Date.now() }; },
+  find(id) { const rows = this.db(); const r = rows.find(x => x.id === id); if (!r) throw new Error("NOT_FOUND"); return [rows, r]; },
+  getRecord(id) { return this.out(this.db().find(r => r.id === id)); },
+  getAppUrl() { return location.href.split("#")[0]; },
+  restore(code) { const c = String(code).toUpperCase().replace(/[^A-Z0-9]/g, ""); return this.out(this.db().find(r => r.code === c.slice(0, 4) + "-" + c.slice(4))); },
+  startTimer(id, nick, now, goal) {
+    const rows = this.db(), hit = rows.find(r => r.id === id);
+    if (hit) return this.out(hit);
+    const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = "";
+    for (let i = 0; i < 8; i++) s += A[Math.floor(Math.random() * A.length)];
+    const start = Date.now();
+    const r = { id, code: s.slice(0, 4) + "-" + s.slice(4), nick, now, goal, start, end: start + (goal - now) * YEAR_MS, resetAt: null };
+    rows.push(r); this.put(rows); return this.out(r);
+  },
+  requestReset(id) { const [rows, r] = this.find(id); if (r.resetAt == null) r.resetAt = Date.now(); this.put(rows); return this.out(r); },
+  cancelReset(id) { const [rows, r] = this.find(id); r.resetAt = null; this.put(rows); return this.out(r); },
+  doReset(id) {
+    const [rows, r] = this.find(id);
+    if (r.resetAt == null || Date.now() - r.resetAt < this.wait()) throw new Error("TOO_EARLY");
+    r.id += "#reset"; r.code += "#reset"; this.put(rows); return this.out(null);
+  }
+};
+// GitHub Pages など外部に置いたときは、この Apps Script の URL に保存を頼む
+const API_URL = "https://script.google.com/macros/s/AKfycbws9tXXiQdB8DKTZQeXnON0hml7cihT2wAUkvM9yAodaP0mI10e7r9lJruEKi6Zdf9m/exec";
+const useRemoteApi = !onGas && location.protocol === "https:" && !/[?&]mock\b/.test(location.search);
+async function apiOnce(fn, ...args) {
+  if (onGas) {
+    return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
+  }
+  if (useRemoteApi) {
+    // text/plain にすると余計な事前確認（CORS プリフライト）が起きない
+    const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ fn, args }) });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    return data.result;
+  }
+  // ローカル確認用（ブラウザ内の仮データ）
+  return new Promise((resolve, reject) => setTimeout(() => { try { resolve(mock[fn](...args)); } catch (e) { reject(e); } }, 400));
+}
+// 混雑で失敗したときは、少し間をあけて自動でやり直す（アプリ側のエラーはやり直さない）
+const APP_ERRORS = ["NOT_FOUND", "TOO_EARLY", "BAD_INPUT", "BAD_ID", "CODE_FAIL"];
+async function api(fn, ...args) {
+  for (let i = 0; ; i++) {
+    try { return await apiOnce(fn, ...args); }
+    catch (e) {
+      const m = String(e && e.message ? e.message : e);
+      if (i >= 3 || APP_ERRORS.some(k => m.includes(k))) throw e;
+      await new Promise(r => setTimeout(r, (1000 << i) + Math.random() * 1000)); // 1秒→2秒→4秒（＋ばらつき）
+    }
+  }
+}
+
+/* ---------- 共通 ---------- */
+const YEAR_MS = 365.2425 * 24 * 3600 * 1000;
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const fmtDate = ms => lang === "ja"
+  ? (d => d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate())(new Date(ms))
+  : new Date(ms).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+const hms = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+let current = "loading";
+function show(id) {
+  current = id; ["loading", "setup", "run", "end"].forEach(s => $(s).classList.toggle("hidden", s !== id));
+  if (typeof Sound !== "undefined") Sound.setSand(id === "run");
+}
+
+let state = null, running = false, offset = 0, restoreMode = false;
+const nowMs = () => Date.now() + offset;  // サーバー時刻に合わせた現在時刻
+const waitMs = () => (state && state.resetWait) || 24 * 3600 * 1000;
+
+/* ---------- 言語切り替え ---------- */
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.title = t("title");
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = String(t(el.dataset.t)).replace("{h}", Math.round(waitMs() / 3600000)));
+  $("sndBtn").textContent = Sound.on ? t("soundOn") : t("soundOff");
+  $("sndBtn").classList.toggle("on", Sound.on);
+  document.querySelectorAll("[data-ph]").forEach(el => el.placeholder = t(el.dataset.ph));
+  document.querySelectorAll(".lang button").forEach(b => b.classList.toggle("on", b.dataset.lang === lang));
+  $("toggleRestore").textContent = restoreMode ? t("toNew") : t("toRestore");
+  if (state) {
+    $("rName").textContent = t("who")(state.nick);
+    $("rRange").textContent = t("ageRange")(state.now, state.goal);
+    $("sStart").textContent = fmtDate(state.start);
+    $("sEnd").textContent = fmtDate(state.end);
+    $("eName").textContent = t("who")(state.nick);
+    renderReset();
+  }
+  ["err", "rErr", "rsErr"].forEach(id => $(id).textContent = "");
+}
+document.querySelectorAll(".lang button").forEach(b => b.onclick = () => { lang = b.dataset.lang; lsSet("inochi-lang", lang); applyLang(); });
+
+/* ---------- 音（BGM と砂の音）— すべてブラウザ内で生成 ---------- */
+const Sound = {
+  ctx: null, on: lsGet("inochi-sound") === "1", sandOn: false,
+  init() {
+    if (this.ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    const c = this.ctx = new AC();
+    this.master = c.createGain(); this.master.gain.value = 0; this.master.connect(c.destination);
+    // 残響（やわらかい広がり）
+    const rev = c.createConvolver();
+    const len = c.sampleRate * 4, ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
+    rev.buffer = ir;
+    const revOut = c.createGain(); revOut.gain.value = 0.55; rev.connect(revOut); revOut.connect(this.master);
+    this.bus = c.createGain(); this.bus.gain.value = 0.5; this.bus.connect(this.master); this.bus.connect(rev);
+    this.rev = rev;
+
+    // 砂の音：ホワイトノイズを帯域フィルターで「さらさら」に
+    const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    const mkNoise = () => { const s = c.createBufferSource(); s.buffer = nb; s.loop = true; s.start(); return s; };
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 5200; bp.Q.value = 0.6;
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1800;
+    this.sandGain = c.createGain(); this.sandGain.gain.value = 0;
+    mkNoise().connect(bp); bp.connect(hp); hp.connect(this.sandGain);
+    // 粒が当たるパチパチ感
+    const hp2 = c.createBiquadFilter(); hp2.type = "highpass"; hp2.frequency.value = 7000;
+    this.crackle = c.createGain(); this.crackle.gain.value = 0;
+    mkNoise().connect(hp2); hp2.connect(this.crackle); this.crackle.connect(this.sandGain);
+    const sandOut = c.createGain(); sandOut.gain.value = 1;
+    this.sandGain.connect(sandOut); sandOut.connect(this.master);
+    const sandRev = c.createGain(); sandRev.gain.value = 0.15; this.sandGain.connect(sandRev); sandRev.connect(rev);
+    setInterval(() => {
+      if (!this.ctx || this.ctx.state !== "running") return;
+      const tt = this.ctx.currentTime;
+      this.crackle.gain.setTargetAtTime(Math.random() < 0.35 ? Math.random() * 0.9 : 0.05, tt, 0.015);
+      bp.frequency.setTargetAtTime(4600 + Math.random() * 1400, tt, 0.2);
+    }, 70);
+
+    // BGM：ゆったりした和音＋ときどき鳴るチャイム
+    this.nextChord = c.currentTime + 0.2; this.chordIdx = 0; this.nextChime = c.currentTime + 3;
+    setInterval(() => this.schedule(), 500);
+    return true;
+  },
+  // Cmaj9 → Am9 → Fmaj7 → G6（周波数 Hz）
+  CHORDS: [[130.81, 196.0, 246.94, 329.63, 293.66], [110.0, 164.81, 261.63, 329.63, 246.94],
+           [87.31, 174.61, 220.0, 261.63, 329.63], [98.0, 146.83, 246.94, 293.66, 329.63]],
+  PENTA: [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66],
+  pad(freq, t0, dur) {
+    const c = this.ctx, g = c.createGain(), lp = c.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 900;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.035, t0 + 3);
+    g.gain.setValueAtTime(0.035, t0 + dur - 1);
+    g.gain.linearRampToValueAtTime(0, t0 + dur + 3);
+    for (const det of [-5, 5]) {
+      const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = freq; o.detune.value = det;
+      o.connect(lp); o.start(t0); o.stop(t0 + dur + 3.2);
+    }
+    lp.connect(g); g.connect(this.bus);
+  },
+  chime(freq, t0) {
+    const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain();
+    o.type = "sine"; o.frequency.value = freq; o2.type = "sine"; o2.frequency.value = freq * 2.01;
+    const g2 = c.createGain(); g2.gain.value = 0.25;
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.05, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 4);
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(this.bus);
+    o.start(t0); o2.start(t0); o.stop(t0 + 4.1); o2.stop(t0 + 4.1);
+  },
+  schedule() {
+    if (!this.ctx || this.ctx.state !== "running") return;
+    const now = this.ctx.currentTime, DUR = 9;
+    if (this.nextChord < now) this.nextChord = now + 0.1;
+    while (this.nextChord < now + 2) {
+      for (const f of this.CHORDS[this.chordIdx % this.CHORDS.length]) this.pad(f, this.nextChord, DUR);
+      this.chordIdx++; this.nextChord += DUR;
+    }
+    if (this.nextChime < now) this.nextChime = now + 0.1;
+    while (this.nextChime < now + 2) {
+      this.chime(this.PENTA[Math.floor(Math.random() * this.PENTA.length)], this.nextChime);
+      this.nextChime += 2.5 + Math.random() * 4;
+    }
+  },
+  async enable() {
+    if (!this.init()) return;
+    try { await this.ctx.resume(); } catch (e) {}
+    this.master.gain.setTargetAtTime(0.9, this.ctx.currentTime, 0.8);
+    this.applySand();
+  },
+  disable() {
+    if (!this.ctx) return;
+    this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3);
+    setTimeout(() => { if (!this.on && this.ctx) this.ctx.suspend(); }, 1500);
+  },
+  setSand(v) { if (v !== this.sandOn) { this.sandOn = v; this.applySand(); } },
+  applySand() { if (this.ctx) this.sandGain.gain.setTargetAtTime(this.sandOn ? 0.06 : 0, this.ctx.currentTime, 0.4); },
+  toggle() {
+    this.on = !this.on; lsSet("inochi-sound", this.on ? "1" : "0");
+    this.on ? this.enable() : this.disable();
+    applyLang();
+  }
+};
+$("sndBtn").onclick = () => Sound.toggle();
+// 前回 ON にしていた人は、最初に画面に触れたときに鳴らし始める（ブラウザの決まりで自動再生はできない）
+document.addEventListener("pointerdown", function first(e) {
+  document.removeEventListener("pointerdown", first, true);
+  if (Sound.on && e.target !== $("sndBtn")) Sound.enable();
+}, true);
+
+/* ---------- 確認ダイアログ ---------- */
+let modalOk = null;
+function openModal(html, okLabel, onOk) { $("mMsg").innerHTML = html; $("mOk").textContent = okLabel; modalOk = onOk; $("modal").classList.remove("hidden"); }
+function closeModal() { $("modal").classList.add("hidden"); }
+$("mBack").onclick = closeModal;
+$("mOk").onclick = async () => {
+  const label = $("mOk").textContent;
+  $("mOk").disabled = true; $("mOk").textContent = t("saving");
+  try { await modalOk(); } finally { $("mOk").disabled = false; $("mOk").textContent = label; closeModal(); }
+};
+
+// この端末のID（スプレッドシートの行と結びつける）
+function newId() { return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+// GAS版から「アプリ版にうつる」で来たとき：住所の ?id= を読んで同じ記録を使い、住所からは消す
+(function adoptIdFromUrl() {
+  const m = location.search.match(/[?&]id=([A-Za-z0-9-]{16,64})/);
+  if (!m || onGas) return;
+  lsSet("inochi-id", m[1]); lsDel("inochi-cache"); lsDel("inochi-checked");
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+})();
+
+let myId = lsGet("inochi-id");
+const freshId = !myId;  // 初めての人：シートに記録があるはずがないので、起動時に通信しない
+if (!myId) { myId = newId(); lsSet("inochi-id", myId); }
+const VERIFY_MS = 6 * 3600 * 1000;  // 端末に記録がある人は、6時間に1回だけシートと照合する
+
+function accept(res) {
+  if (typeof res.serverNow === "number") offset = res.serverNow - Date.now();
+  if (!res.record) return false;
+  state = res.record;
+  myId = state.id;
+  lsSet("inochi-id", state.id);
+  lsSet("inochi-cache", JSON.stringify(state));
+  lsSet("inochi-checked", String(Date.now()));
+  begin();
+  return true;
+}
+
+/* ---------- 新しく始める ---------- */
+$("startBtn").onclick = () => {
+  const nick = $("nick").value.trim();
+  const now = Number($("now").value), goal = Number($("goal").value);
+  let msg = "";
+  if (!nick) msg = t("errNick");
+  else if ($("now").value === "" || !Number.isInteger(now) || now < 0) msg = t("errNow");
+  else if ($("goal").value === "" || !Number.isInteger(goal)) msg = t("errGoalInt");
+  else if (goal <= now) msg = t("errGoalGt");
+  else if (goal > 150) msg = t("errGoalMax");
+  $("err").textContent = msg;
+  if (msg) return;
+  openModal(t("confirmStart")(escapeHtml(nick), now, goal), t("begin"), async () => {
+    try { accept(await api("startTimer", myId, nick, now, goal)); }
+    catch (e) { $("err").textContent = errText(e); }
+  });
+};
+
+/* ---------- 引き継ぎコード ---------- */
+$("toggleRestore").onclick = () => {
+  restoreMode = !restoreMode;
+  $("restoreCard").classList.toggle("hidden", !restoreMode);
+  $("newCard").classList.toggle("hidden", restoreMode);
+  $("toggleRestore").textContent = restoreMode ? t("toNew") : t("toRestore");
+};
+$("restoreBtn").onclick = async () => {
+  const code = $("codeIn").value.trim();
+  if (code.replace(/[^A-Za-z0-9]/g, "").length !== 8) { $("rErr").textContent = t("errCode8"); return; }
+  $("restoreBtn").disabled = true; $("rErr").textContent = "";
+  try { if (!accept(await api("restore", code))) $("rErr").textContent = t("errCodeNF"); }
+  catch (e) { $("rErr").textContent = errText(e); }
+  finally { $("restoreBtn").disabled = false; }
+};
+$("copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText(state.code); $("copyBtn").textContent = t("copied"); }
+  catch (e) { $("copyBtn").textContent = t("copyFail"); }
+  setTimeout(() => $("copyBtn").textContent = t("copy"), 2000);
+};
+
+/* ---------- リセット（申し込み → 待ち時間 → 長押し） ---------- */
+function renderReset() {
+  if (!state) return;
+  const waiting = state.resetAt != null;
+  const left = waiting ? state.resetAt + waitMs() - nowMs() : 0;
+  $("rsIdle").classList.toggle("hidden", waiting);
+  $("rsWait").classList.toggle("hidden", !waiting || left <= 0);
+  $("rsReady").classList.toggle("hidden", !waiting || left > 0);
+  if (waiting && left > 0) $("rsWaitText").textContent = t("resetWaiting")(hms(left));
+}
+async function resetCall(fn) {
+  $("rsErr").textContent = "";
+  try { const res = await api(fn, myId); if (res.record) { state = res.record; lsSet("inochi-cache", JSON.stringify(state)); } return res; }
+  catch (e) { $("rsErr").textContent = errText(e); throw e; }
+  finally { renderReset(); }
+}
+$("rsReqBtn").onclick = () => openModal(t("confirmReset")(Math.round(waitMs() / 3600000)), t("requestBtn"), () => resetCall("requestReset").catch(() => {}));
+$("rsCancelBtn").onclick = $("rsCancelBtn2").onclick = () => resetCall("cancelReset").catch(() => {});
+
+const HOLD_MS = 3000;
+let holdTimer = null, holdStart = 0;
+function holdStop() { clearInterval(holdTimer); holdTimer = null; $("rsHoldBtn").style.setProperty("--p", "0%"); }
+$("rsHoldBtn").addEventListener("pointerdown", e => {
+  e.preventDefault(); if (holdTimer) return;
+  holdStart = performance.now();
+  holdTimer = setInterval(async () => {
+    const p = Math.min(1, (performance.now() - holdStart) / HOLD_MS);
+    $("rsHoldBtn").style.setProperty("--p", (p * 100) + "%");
+    if (p >= 1) {
+      holdStop();
+      try {
+        await resetCall("doReset");
+        running = false; if (watch) clearInterval(watch);
+        state = null; lsDel("inochi-cache"); myId = newId(); lsSet("inochi-id", myId);
+        ["nick", "now", "goal"].forEach(id => $(id).value = "");
+        show("setup"); applyLang();
+      } catch (e) {}
+    }
+  }, 30);
+});
+["pointerup", "pointerleave", "pointercancel"].forEach(ev => $("rsHoldBtn").addEventListener(ev, holdStop));
+$("rsHoldBtn").addEventListener("contextmenu", e => e.preventDefault());
+
+/* ---------- SNSシェア（残り時間と砂時計だけ。名前・年齢・日付は入れない） ---------- */
+// アプリのURLは Apps Script がページに埋め込む（通信なし）。ローカル確認時はこのページのURL
+const EMBED_URL = (document.querySelector('meta[name="app-url"]') || {}).content || "";
+let appUrl = /^https?:/.test(EMBED_URL) ? EMBED_URL : location.href.split("#")[0];
+let shareBlob = null, shareMsg = "";
+
+function makeShareImage() {
+  const S = 1080, c = document.createElement("canvas"); c.width = c.height = S;
+  const g = c.getContext("2d");
+  const bg = g.createRadialGradient(S / 2, S * 0.42, 60, S / 2, S / 2, S * 0.75);
+  bg.addColorStop(0, "#2a2219"); bg.addColorStop(1, "#0f0c09");
+  g.fillStyle = bg; g.fillRect(0, 0, S, S);
+  const serif = '"Hiragino Mincho ProN", "Yu Mincho", "YuMincho", Georgia, serif';
+  const mono = '"SF Mono", Consolas, Menlo, monospace';
+  g.textAlign = "center"; g.textBaseline = "alphabetic";
+
+  g.fillStyle = "#efe6d6"; g.font = `600 44px ${serif}`;
+  g.fillText(t("imgTitle"), S / 2, 96);
+
+  // 今の砂時計の絵をそのまま使う（確実に描かれているよう、撮る直前に描き直す）
+  drawHourglass(Math.min(1, Math.max(0, state.end - nowMs()) / (state.end - state.start)), performance.now());
+  const gh = 600, gw = gh * W / H;
+  g.drawImage(cv, (S - gw) / 2, 130, gw, gh);
+
+  const left = Math.max(0, state.end - nowMs());
+  const secStr = Math.floor(left / 1000).toLocaleString("en-US");
+  const msStr = "." + String(Math.floor(left % 1000)).padStart(3, "0");
+  g.fillStyle = "#a39682"; g.font = `30px ${serif}`;
+  g.fillText(t("imgLeft"), S / 2, 795);
+
+  // 数字の大きさを幅に合わせる
+  let fs = 92;
+  const unit = t("imgSec");
+  const measure = () => { g.font = `${fs}px ${mono}`; const a = g.measureText(secStr).width, b = g.measureText(msStr).width;
+    g.font = `${fs * 0.42}px ${serif}`; return [a, b, g.measureText(unit).width + 14]; };
+  let [wa, wb, wu] = measure();
+  while (wa + wb + wu > S - 120 && fs > 40) { fs -= 2; [wa, wb, wu] = measure(); }
+  let x = (S - (wa + wb + wu)) / 2, y = 900;
+  g.textAlign = "left";
+  g.font = `${fs}px ${mono}`; g.fillStyle = "#f3e7cf"; g.fillText(secStr, x, y); x += wa;
+  g.fillStyle = "#8a7f70"; g.fillText(msStr, x, y); x += wb + 14;
+  g.font = `${fs * 0.42}px ${serif}`; g.fillText(unit, x, y);
+  g.textAlign = "center";
+
+  if (left <= 0) {
+    // 砂が落ちきったとき：「お疲れ様でした」
+    g.fillStyle = "#f3e7cf"; g.font = `600 ${lang === "ja" ? 60 : 46}px ${serif}`;
+    g.fillText(t("endTitle"), S / 2, 975);
+  } else {
+    const years = Math.floor(left / YEAR_MS), days = Math.floor((left - years * YEAR_MS) / 86400000);
+    g.fillStyle = "#a39682"; g.font = `30px ${serif}`;
+    g.fillText(lang === "ja" ? `${years}年 ${days}日` : `${years} years ${days} days`, S / 2, 960);
+  }
+
+  g.fillStyle = "#6d6253"; g.font = `26px ${serif}`;
+  g.fillText(t("shareTag"), S / 2, 1040);
+  return { canvas: c, secStr, ended: left <= 0 };
+}
+
+$("shareBtn").onclick = $("endShareBtn").onclick = () => {
+  if (!state) return;
+  const { canvas, secStr, ended } = makeShareImage();
+  shareMsg = `${ended ? t("shareEndText") : t("shareText")(secStr)}\n${t("shareTag")}`;
+  $("shareImg").src = canvas.toDataURL("image/png");
+  shareBlob = null;
+  canvas.toBlob(b => shareBlob = b, "image/png");
+  $("shNative").classList.toggle("hidden", !navigator.share);
+  $("shareModal").classList.remove("hidden");
+};
+$("shClose").onclick = () => $("shareModal").classList.add("hidden");
+$("shNative").onclick = async () => {
+  const text = shareMsg + (appUrl ? "\n" + appUrl : "");
+  try {
+    const file = shareBlob && new File([shareBlob], t("fileName"), { type: "image/png" });
+    if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text });
+    else await navigator.share({ text });
+  } catch (e) { /* キャンセルや非対応のときは何もしない */ }
+};
+$("shX").onclick = () => {
+  const u = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(shareMsg) + (appUrl ? "&url=" + encodeURIComponent(appUrl) : "");
+  window.open(u, "_blank", "noopener");
+};
+$("shSave").onclick = () => {
+  const a = document.createElement("a");
+  a.href = $("shareImg").src; a.download = t("fileName");
+  document.body.appendChild(a); a.click(); a.remove();
+};
+$("shCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(shareMsg + (appUrl ? "\n" + appUrl : "")); $("shCopy").textContent = t("copiedShort"); }
+  catch (e) { $("shCopy").textContent = t("copyFail"); }
+  setTimeout(() => $("shCopy").textContent = t("shareCopy"), 2000);
+};
+
+/* ---------- 砂時計の描画 ---------- */
+const cv = $("glass");
+let ctx = cv.getContext("2d");  // 描画先（終了画面では一時的に切り替える）
+const W = 240, H = 360, DPR = Math.min(window.devicePixelRatio || 1, 3);
+cv.width = W * DPR; cv.height = H * DPR; ctx.scale(DPR, DPR);
+const endCv = $("endGlass"), endCtx = endCv.getContext("2d");
+endCv.width = W * DPR; endCv.height = H * DPR; endCtx.scale(DPR, DPR);
+
+const CX = 120, TOP = 34, NECK = 180, BOT = 326, MAXW = 74, NECKW = 3.2;
+function halfW(y) {
+  const tt = y < NECK ? (NECK - y) / (NECK - TOP) : (y - NECK) / (BOT - NECK);
+  const k = Math.max(0, Math.min(1, tt));
+  return NECKW + (MAXW - NECKW) * Math.pow(Math.sin(k * Math.PI / 2), 0.55) * (1 - 0.18 * Math.pow(k, 8));
+}
+const FILL = 0.82;
+function buildVol(from, to, step) {
+  const arr = []; let v = 0;
+  for (let y = from; step > 0 ? y <= to : y >= to; y += step) { const w = halfW(y); v += w * w; arr.push({ y, v }); }
+  return arr;
+}
+const topTable = buildVol(NECK, TOP + (NECK - TOP) * (1 - FILL), -0.5);
+const SAND_V = topTable[topTable.length - 1].v;
+const botTable = buildVol(BOT, NECK + 20, -0.5);
+function levelFor(table, v) {
+  for (const p of table) if (p.v >= v) return p.y;
+  return table[table.length - 1].y;
+}
+function makeSandPattern(base, dark, light) {
+  const c = document.createElement("canvas"); c.width = c.height = 96;
+  const g = c.getContext("2d");
+  g.fillStyle = base; g.fillRect(0, 0, 96, 96);
+  for (let i = 0; i < 1400; i++) {
+    g.fillStyle = Math.random() < 0.5 ? dark : light;
+    g.globalAlpha = 0.25 + Math.random() * 0.5;
+    g.fillRect(Math.random() * 96, Math.random() * 96, Math.random() < 0.8 ? 1 : 1.6, 1);
+  }
+  return ctx.createPattern(c, "repeat");
+}
+const sandPat = makeSandPattern("#d8a957", "#a8752d", "#f3d394");
+
+function glassPath() {
+  ctx.beginPath();
+  ctx.moveTo(CX - halfW(TOP), TOP);
+  for (let y = TOP; y <= BOT; y += 1) ctx.lineTo(CX - halfW(y), y);
+  for (let y = BOT; y >= TOP; y -= 1) ctx.lineTo(CX + halfW(y), y);
+  ctx.closePath();
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawFrame() {
+  for (const x of [CX - 98, CX + 90]) {
+    const g = ctx.createLinearGradient(x, 0, x + 8, 0);
+    g.addColorStop(0, "#3e2613"); g.addColorStop(.4, "#8a5a32"); g.addColorStop(1, "#4a2e17");
+    ctx.fillStyle = g; ctx.fillRect(x, 22, 8, 316);
+    ctx.fillStyle = "rgba(0,0,0,.25)";
+    for (const yy of [40, 180, 320]) ctx.fillRect(x - 1, yy - 2, 10, 4);
+  }
+  for (const [y, h] of [[10, 18], [332, 18]]) {
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, "#8a5a32"); g.addColorStop(.45, "#6b4224"); g.addColorStop(1, "#3e2613");
+    ctx.fillStyle = g;
+    roundRect(CX - 112, y, 224, h, 5); ctx.fill();
+    ctx.strokeStyle = "rgba(255,230,190,.18)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(CX - 108, y + 3); ctx.lineTo(CX + 108, y + 3); ctx.stroke();
+    ctx.strokeStyle = "rgba(30,15,5,.25)";
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(CX - 108, y + 7 + i * 4); ctx.bezierCurveTo(CX - 40, y + 5 + i * 4, CX + 30, y + 10 + i * 4, CX + 108, y + 7 + i * 4); ctx.stroke(); }
+  }
+}
+function shadeSand(y0, y1) {
+  const g = ctx.createLinearGradient(CX - MAXW, 0, CX + MAXW, 0);
+  g.addColorStop(0, "rgba(70,40,10,.38)"); g.addColorStop(.35, "rgba(255,235,190,.08)");
+  g.addColorStop(.6, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(70,40,10,.45)");
+  // 直前に塗った砂の形だけに陰影をつける（ガラスに帯が出ないように）
+  ctx.save(); ctx.clip(); ctx.fillStyle = g;
+  ctx.fillRect(CX - MAXW - 2, y0 - 30, MAXW * 2 + 4, y1 - y0 + 32);
+  ctx.restore();
+}
+
+const grains = [];
+let lastT = performance.now();
+function drawHourglass(ratio, tm) {
+  const dt = Math.min(0.05, (tm - lastT) / 1000); lastT = tm;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(0,0,0,.18)";
+  ctx.beginPath(); ctx.ellipse(CX, 352, 110, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+  glassPath();
+  const gb = ctx.createLinearGradient(CX - MAXW, 0, CX + MAXW, 0);
+  gb.addColorStop(0, "rgba(200,220,230,.16)"); gb.addColorStop(.5, "rgba(255,255,255,.04)"); gb.addColorStop(1, "rgba(160,190,205,.2)");
+  ctx.fillStyle = gb; ctx.fill();
+
+  ctx.save(); glassPath(); ctx.clip();
+  const topY = levelFor(topTable, SAND_V * ratio);
+  if (ratio > 0) {
+    const dip = Math.min(10, (NECK - topY) * 0.25);
+    ctx.beginPath();
+    ctx.moveTo(CX - MAXW - 2, topY);
+    ctx.quadraticCurveTo(CX - halfW(topY) * 0.5, topY, CX, topY + dip);
+    ctx.quadraticCurveTo(CX + halfW(topY) * 0.5, topY, CX + MAXW + 2, topY);
+    ctx.lineTo(CX + MAXW + 2, NECK + 1); ctx.lineTo(CX - MAXW - 2, NECK + 1); ctx.closePath();
+    ctx.fillStyle = sandPat; ctx.fill();
+    shadeSand(topY, NECK);
+  }
+  const baseY = levelFor(botTable, SAND_V * (1 - ratio) * 0.92);
+  const mound = Math.min(26, 6 + (BOT - baseY) * 0.35) * Math.min(1, (1 - ratio) * 40);
+  const peakY = baseY - mound;
+  if (ratio < 1) {
+    ctx.beginPath();
+    ctx.moveTo(CX - MAXW - 2, BOT + 2);
+    ctx.lineTo(CX - MAXW - 2, baseY + mound * 0.25);
+    ctx.bezierCurveTo(CX - 40, baseY, CX - 10, peakY, CX, peakY);
+    ctx.bezierCurveTo(CX + 10, peakY, CX + 40, baseY, CX + MAXW + 2, baseY + mound * 0.25);
+    ctx.lineTo(CX + MAXW + 2, BOT + 2); ctx.closePath();
+    ctx.fillStyle = sandPat; ctx.fill();
+    shadeSand(peakY, BOT);
+  }
+  if (ratio > 0) {
+    const sg = ctx.createLinearGradient(0, NECK, 0, peakY);
+    sg.addColorStop(0, "rgba(214,165,82,.95)"); sg.addColorStop(1, "rgba(214,165,82,.55)");
+    ctx.fillStyle = sg;
+    ctx.fillRect(CX - 0.9, NECK - 2, 1.8, peakY - NECK + 2);
+    for (let i = 0; i < 5; i++) grains.push({ x: CX + (Math.random() - .5) * 1.6, y: NECK + Math.random() * 4, vy: 40 + Math.random() * 60, vx: (Math.random() - .5) * 6 });
+  }
+  for (let i = grains.length - 1; i >= 0; i--) {
+    const g = grains[i];
+    g.vy += 900 * dt; g.y += g.vy * dt; g.x += g.vx * dt;
+    if (g.y >= peakY - 1) {
+      if (!g.bounced && Math.random() < 0.5) { g.bounced = true; g.vy = -40 - Math.random() * 50; g.vx = (Math.random() - .5) * 80; g.y = peakY - 2; }
+      else { grains.splice(i, 1); continue; }
+    }
+    ctx.fillStyle = Math.random() < .5 ? "#f0cd86" : "#b27f33";
+    ctx.fillRect(g.x - .6, g.y, 1.3, 1.3);
+  }
+  if (grains.length > 400) grains.splice(0, grains.length - 400);
+  ctx.restore();
+
+  glassPath();
+  ctx.strokeStyle = "rgba(190,210,220,.55)"; ctx.lineWidth = 2.2; ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = .8; ctx.stroke();
+  ctx.save(); glassPath(); ctx.clip();
+  ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 3; ctx.lineCap = "round";
+  ctx.beginPath();
+  for (let y = TOP + 14; y <= NECK - 34; y += 2) { const x = CX - halfW(y) + 9 + (halfW(y) / MAXW) * 4; y === TOP + 14 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
+  ctx.beginPath();
+  for (let y = NECK + 40; y <= BOT - 16; y += 2) { const x = CX - halfW(y) + 9 + (halfW(y) / MAXW) * 4; y === NECK + 40 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,.18)"; ctx.lineWidth = 6;
+  ctx.beginPath();
+  for (let y = TOP + 30; y <= NECK - 50; y += 2) { const x = CX + halfW(y) - 14; y === TOP + 30 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
+  ctx.restore();
+
+  const ng = ctx.createLinearGradient(CX - 10, 0, CX + 10, 0);
+  ng.addColorStop(0, "rgba(120,140,150,.5)"); ng.addColorStop(.5, "rgba(255,255,255,.35)"); ng.addColorStop(1, "rgba(120,140,150,.5)");
+  ctx.fillStyle = ng; ctx.fillRect(CX - 9, NECK - 3, 18, 6);
+  drawFrame();
+}
+
+/* ---------- カウントダウン ---------- */
+let watch = null;
+function begin() {
+  if (nowMs() >= state.end) { finish(); return; }
+  $("sCode").textContent = state.code || "—";
+  show("run");
+  applyLang();
+  if (running) return;
+  running = true;
+  requestAnimationFrame(frame);
+  // 画面が裏にあって描画が止まっていても、終わりの時刻とリセット待ちは必ず更新する
+  watch = setInterval(() => {
+    if (!state) return;
+    renderReset();
+    if (nowMs() >= state.end) { clearInterval(watch); running = false; setTimeout(finish, 1500); }
+  }, 250);
+}
+
+function frame(tm) {
+  if (!running || !state) return;
+  const total = state.end - state.start;
+  const left = Math.max(0, state.end - nowMs());
+  const ratio = Math.min(1, left / total);
+
+  $("sInt").textContent = Math.floor(left / 1000).toLocaleString("en-US");
+  $("sMs").textContent = "." + String(Math.floor(left % 1000)).padStart(3, "0");
+  const years = Math.floor(left / YEAR_MS);
+  let rest = left - years * YEAR_MS;
+  const days = Math.floor(rest / 86400000); rest -= days * 86400000;
+  $("rDetail").textContent = t("detail")(years, days, hms(Math.floor(rest / 1000) * 1000));
+  $("sPct").textContent = (ratio * 100).toFixed(7) + "%";
+  $("sPast").textContent = t("pastSec")((Math.max(0, total - left) / 1000).toFixed(3));
+
+  drawHourglass(ratio, tm);
+  if (left <= 0) return;
+  requestAnimationFrame(frame);
+}
+
+function finish() {
+  running = false;
+  if (watch) clearInterval(watch);
+  show("end");
+  applyLang();
+  drawEnd();
+}
+
+// 終了画面の砂時計：上は空、下は満杯。最後の粒が落ちきるまで少しだけ動かす
+function drawEnd() {
+  const until = performance.now() + 2500;
+  const step = tm => {
+    const keep = ctx; ctx = endCtx;
+    drawHourglass(0, tm);
+    ctx = keep;
+    if (tm < until && current === "end") requestAnimationFrame(step);
+  };
+  // 描画が止まっている（裏にある）ときでも、最低1回は描く
+  const keep = ctx; ctx = endCtx; drawHourglass(0, performance.now()); ctx = keep;
+  requestAnimationFrame(step);
+}
+
+/* ---------- 起動 ---------- */
+applyLang();
+/* ---------- アプリ版（GitHub Pages）：ホーム画面に置く・GAS版からの引っ越し ---------- */
+const WEB_URL = "https://hamcheese-jp.github.io/inochi-sunadokei/";
+const isStandalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; });
+if (useRemoteApi && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+$("installBtn").classList.toggle("hidden", !useRemoteApi || isStandalone);
+$("migrateBtn").classList.toggle("hidden", !onGas);
+$("installBtn").onclick = async () => {
+  if (installPrompt) { installPrompt.prompt(); try { await installPrompt.userChoice; } catch (e) {} installPrompt = null; return; }
+  openModal(t("installHow")(state && state.code ? escapeHtml(state.code) : ""), "OK", async () => {});
+};
+$("migrateBtn").onclick = () => {
+  // 記録があれば同じIDを持っていく（向こうで続きから表示される）
+  window.open(WEB_URL + (state ? "?id=" + encodeURIComponent(myId) : ""), "_blank", "noopener");
+};
+// 設定画面とカウントダウン中だけ表示
+const _show = show;
+show = id => { _show(id); $("appLinks").classList.toggle("hidden", !(id === "setup" || id === "run")); };
+
+(async function boot() {
+  // まずは端末に残っている記録ですぐ表示し、そのあとシートで確認する
+  try { const c = JSON.parse(lsGet("inochi-cache")); if (c && c.id === myId) { state = c; begin(); } } catch (e) {}
+  // 通信を減らす：初めての人はそのまま設定画面へ。最近照合した人はシートに聞きに行かない
+  if (freshId && !state) { show("setup"); applyLang(); return; }
+  if (state && Date.now() - Number(lsGet("inochi-checked") || 0) < VERIFY_MS) return;
+  try {
+    const res = await api("getRecord", myId);
+    if (!accept(res)) {
+      // シート側でリセット・削除されていたら設定画面へ
+      if (state) { running = false; if (watch) clearInterval(watch); state = null; lsDel("inochi-cache"); }
+      show("setup"); applyLang();
+    }
+  } catch (e) {
+    if (!state) { show("setup"); applyLang(); $("err").textContent = t("errNet"); }
+  }
+})();
+</script>
+</body>
+</html>
