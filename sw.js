@@ -1,5 +1,5 @@
 // 命の砂時計：ふだんはネットから取り、つながらないときだけ取っておいたものを使う
-const CACHE = "inochi-v1";
+const CACHE = "inochi-v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "favicon-32.png"];
 
 self.addEventListener("install", e => {
