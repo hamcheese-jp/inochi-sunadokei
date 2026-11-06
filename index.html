@@ -93,6 +93,16 @@
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
   .shareBtn { margin-top: 18px; }
+  .profile { margin-top: 36px; padding: 18px 16px; border-top: 1px solid var(--line); text-align: center; }
+  .pfHead { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: .8rem; letter-spacing: .1em; }
+  .pfHead img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); }
+  #pfText { white-space: pre-line; line-height: 1.8; font-size: .9rem; margin: 12px 0 14px; word-break: break-word; }
+  #pfText:empty { display: none; }
+  .pfLinks { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .pfLinks a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--ink); text-decoration: none; font-size: .85rem; font-family: system-ui, sans-serif; }
+  .pfLinks a:hover { background: var(--card); }
+  .pfLinks svg { width: 15px; height: 15px; fill: currentColor; }
   .shareImg { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; margin-bottom: 8px; }
   .shareCard { max-height: 92vh; overflow-y: auto; }
   .btnRow { display: flex; gap: 8px; } .btnRow button { margin-top: 8px; font-size: .9rem; letter-spacing: .03em !important; padding: 12px 6px; }
@@ -188,6 +198,20 @@
     <p id="eName"></p>
     <button class="shareBtn" id="endShareBtn" data-t="share"></button>
   </section>
+
+  <!-- つくった人（スプレッドシートの「プロフィール」シートの内容が出る） -->
+  <aside id="profile" class="profile hidden">
+    <div class="pfHead">
+      <img id="pfAvatar" src="icon-192.png" alt="" onerror="this.remove()">
+      <span data-t="creator"></span>
+    </div>
+    <p id="pfText"></p>
+    <div class="pfLinks">
+      <a id="pfX" class="hidden" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.8 7.8L23 22h-6.2l-4.8-6.3L6.4 22H3.3l7.3-8.3L1 2h6.3l4.4 5.8L18.9 2Zm-1.1 18h1.7L6.3 3.9H4.5L17.8 20Z"/></svg>X</a>
+      <a id="pfTiktok" class="hidden" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.6 2h-3.4v13.3a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .9.1V9.1a6.3 6.3 0 1 0 5.4 6.2V8.6a8 8 0 0 0 4.4 1.4V6.6a4.5 4.5 0 0 1-4.4-4.6Z"/></svg>TikTok</a>
+      <a id="pfYoutube" class="hidden" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM9.8 15.1V8.9l5.8 3.1-5.8 3.1Z"/></svg>YouTube</a>
+    </div>
+  </aside>
 </div>
 
 <div class="modal hidden" id="modal">
@@ -242,6 +266,7 @@ const I18N = {
     BAD_INPUT: "入力内容を確認してください", BAD_ID: "端末IDが不正です", CODE_FAIL: "もう一度お試しください",
     BUSY: "混み合っています。少し時間をおいてもう一度お試しください",
     soundOn: "♪ 音 ON", soundOff: "♪ 音 OFF",
+    creator: "つくった人",
     install: "📲 ホーム画面に置く", migrate: "📲 帯のないアプリ版にうつる（記録はそのまま）",
     installHow: code => `<b>iPhone</b>：Safari の共有ボタン（□↑）→「ホーム画面に追加」<br><b>Android</b>：Chrome のメニュー（︙）→「ホーム画面に追加」`
       + (code ? `<br><br>ホーム画面のアプリは記録が別になります。開いたら「引き継ぎコードで続きから」に <b>${code}</b> を入れてください。` : ""),
@@ -277,6 +302,7 @@ const I18N = {
     BAD_INPUT: "Please check your input", BAD_ID: "Invalid device ID", CODE_FAIL: "Please try again",
     BUSY: "It's busy right now. Please try again in a moment",
     soundOn: "♪ Sound ON", soundOff: "♪ Sound OFF",
+    creator: "Made by",
     install: "📲 Add to Home Screen", migrate: "📲 Move to the app version without the banner (keeps your record)",
     installHow: code => `<b>iPhone</b>: Safari Share button (□↑) → "Add to Home Screen"<br><b>Android</b>: Chrome menu (︙) → "Add to Home screen"`
       + (code ? `<br><br>The home-screen app keeps its own data. After opening it, choose "Continue with a transfer code" and enter <b>${code}</b>.` : ""),
@@ -307,6 +333,7 @@ const mock = {
   find(id) { const rows = this.db(); const r = rows.find(x => x.id === id); if (!r) throw new Error("NOT_FOUND"); return [rows, r]; },
   getRecord(id) { return this.out(this.db().find(r => r.id === id)); },
   getAppUrl() { return location.href.split("#")[0]; },
+  getProfile() { return { text: "（ここにプロフィールが出ます）\nスプレッドシートの「プロフィール」シートで編集できます。", x: "https://x.com/example", tiktok: "https://www.tiktok.com/@example", youtube: "https://www.youtube.com/@example" }; },
   restore(code) { const c = String(code).toUpperCase().replace(/[^A-Z0-9]/g, ""); return this.out(this.db().find(r => r.code === c.slice(0, 4) + "-" + c.slice(4))); },
   startTimer(id, nick, now, goal) {
     const rows = this.db(), hit = rows.find(r => r.id === id);
@@ -960,9 +987,37 @@ $("migrateBtn").onclick = () => {
   // 記録があれば同じIDを持っていく（向こうで続きから表示される）
   window.open(WEB_URL + (state ? "?id=" + encodeURIComponent(myId) : ""), "_blank", "noopener");
 };
-// 設定画面とカウントダウン中だけ表示
+/* ---------- つくった人（プロフィールとSNSリンク） ---------- */
+let profile = null;
+function renderProfile() {
+  const p = profile || {};
+  const has = !!(p.text || p.x || p.tiktok || p.youtube);
+  $("pfText").textContent = p.text || "";
+  [["pfX", p.x], ["pfTiktok", p.tiktok], ["pfYoutube", p.youtube]].forEach(([id, url]) => {
+    const ok = typeof url === "string" && /^https:\/\//.test(url);
+    $(id).classList.toggle("hidden", !ok);
+    if (ok) $(id).href = url;
+  });
+  $("profile").classList.toggle("hidden", !has || current === "loading");
+}
+async function loadProfile() {
+  // 端末に1時間とっておき、その間は通信しない（アクセスが多くても大丈夫なように）
+  try { const c = JSON.parse(lsGet("inochi-profile")); if (c) { profile = c.p; renderProfile(); if (Date.now() - c.at < 3600 * 1000) return; } } catch (e) {}
+  try {
+    profile = await apiOnce("getProfile");
+    lsSet("inochi-profile", JSON.stringify({ at: Date.now(), p: profile }));
+    renderProfile();
+  } catch (e) { /* 出せなくてもアプリは動く */ }
+}
+
+// 設定画面とカウントダウン中だけ「ホーム画面に置く」などを表示。プロフィールはどの画面でも下に出す
 const _show = show;
-show = id => { _show(id); $("appLinks").classList.toggle("hidden", !(id === "setup" || id === "run")); };
+show = id => {
+  _show(id);
+  $("appLinks").classList.toggle("hidden", !(id === "setup" || id === "run"));
+  renderProfile();
+};
+loadProfile();
 
 (async function boot() {
   // まずは端末に残っている記録ですぐ表示し、そのあとシートで確認する
