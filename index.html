@@ -102,6 +102,12 @@
   .pfLinks a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
     color: var(--ink); text-decoration: none; font-size: .85rem; font-family: system-ui, sans-serif; }
   .pfLinks a:hover { background: var(--card); }
+  .edit h3 { margin: 0 0 6px; font-size: 1.1rem; letter-spacing: .1em; }
+  .edit textarea { width: 100%; font: inherit; font-size: 1rem; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); resize: vertical; line-height: 1.6; }
+  .edIconRow { display: flex; gap: 14px; align-items: center; text-align: left; }
+  .edIconRow img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 1px dashed var(--line); background: var(--bg); flex: none; }
+  .edIconRow .note { margin-top: 6px; }
   .pfLinks svg { width: 15px; height: 15px; fill: currentColor; }
   .shareImg { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; margin-bottom: 8px; }
   .shareCard { max-height: 92vh; overflow-y: auto; }
@@ -202,7 +208,7 @@
   <!-- つくった人（スプレッドシートの「プロフィール」シートの内容が出る） -->
   <aside id="profile" class="profile hidden">
     <div class="pfHead">
-      <img id="pfAvatar" src="icon-192.png" alt="" onerror="this.remove()">
+      <img id="pfAvatar" src="icon-192.png" alt="" onerror="this.style.display='none'">
       <span data-t="creator"></span>
     </div>
     <p id="pfText"></p>
@@ -211,6 +217,7 @@
       <a id="pfTiktok" class="hidden" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.6 2h-3.4v13.3a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .9.1V9.1a6.3 6.3 0 1 0 5.4 6.2V8.6a8 8 0 0 0 4.4 1.4V6.6a4.5 4.5 0 0 1-4.4-4.6Z"/></svg>TikTok</a>
       <a id="pfYoutube" class="hidden" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8ZM9.8 15.1V8.9l5.8 3.1-5.8 3.1Z"/></svg>YouTube</a>
     </div>
+    <button class="link hidden" id="pfEditBtn" data-t="pfEdit"></button>
   </aside>
 </div>
 
@@ -236,6 +243,37 @@
       <button class="ghost" id="shClose" data-t="close"></button>
     </div>
     <div class="note" data-t="shareHint"></div>
+  </div>
+</div>
+
+<div class="modal hidden" id="editModal">
+  <div class="card shareCard edit">
+    <h3 data-t="pfEditTitle"></h3>
+    <div id="edPassBox">
+      <label for="edPass" data-t="pfPass"></label>
+      <input id="edPass" maxlength="9" autocomplete="off" autocapitalize="characters" placeholder="ABCD2345">
+      <div class="note" data-t="pfPassNote"></div>
+    </div>
+    <div id="edForm">
+      <label data-t="pfIcon"></label>
+      <div class="edIconRow">
+        <img id="edIcon" alt="">
+        <div>
+          <button class="ghost small" id="edPick" data-t="pfPick"></button>
+          <button class="ghost small" id="edClearIcon" data-t="pfClearIcon"></button>
+          <div class="note" data-t="pfPasteNote"></div>
+        </div>
+        <input type="file" id="edFile" accept="image/*" hidden>
+      </div>
+      <label for="edText"><span data-t="pfText"></span> <span id="edCount" class="note"></span></label>
+      <textarea id="edText" rows="4" maxlength="300"></textarea>
+      <label for="edX">X</label><input id="edX" inputmode="url" placeholder="https://x.com/...">
+      <label for="edTiktok">TikTok</label><input id="edTiktok" inputmode="url" placeholder="https://www.tiktok.com/@...">
+      <label for="edYoutube">YouTube</label><input id="edYoutube" inputmode="url" placeholder="https://www.youtube.com/@...">
+    </div>
+    <div class="err" id="edErr"></div>
+    <button id="edSave" data-t="pfSave"></button>
+    <button class="ghost" id="edClose" data-t="close"></button>
   </div>
 </div>
 
@@ -267,6 +305,12 @@ const I18N = {
     BUSY: "混み合っています。少し時間をおいてもう一度お試しください",
     soundOn: "♪ 音 ON", soundOff: "♪ 音 OFF",
     creator: "つくった人",
+    pfEdit: "✏️ プロフィールを編集", pfEditTitle: "プロフィールを編集", pfPass: "編集用パスコード",
+    pfPassNote: "スプレッドシートの「プロフィール」シートにある「編集用パスコード」を入れてください（この端末では次から不要）。",
+    pfIcon: "アイコン", pfPick: "画像を選ぶ", pfClearIcon: "なしにする", pfPasteNote: "画像をコピーして、この画面で貼り付け（Ctrl+V）でもOK",
+    pfText: "説明文", pfSave: "保存する", pfSaved: "保存しました",
+    BAD_PASS: "パスコードがちがいます", LOCKED: "まちがいが多いため、10分ほど待ってからお試しください", BAD_ICON: "この画像は使えません。別の画像をお試しください",
+    pfBadUrl: "URLは https:// から始まる X・TikTok・YouTube のものにしてください",
     install: "📲 ホーム画面に置く", migrate: "📲 帯のないアプリ版にうつる（記録はそのまま）",
     installHow: code => `<b>iPhone</b>：Safari の共有ボタン（□↑）→「ホーム画面に追加」<br><b>Android</b>：Chrome のメニュー（︙）→「ホーム画面に追加」`
       + (code ? `<br><br>ホーム画面のアプリは記録が別になります。開いたら「引き継ぎコードで続きから」に <b>${code}</b> を入れてください。` : ""),
@@ -303,6 +347,12 @@ const I18N = {
     BUSY: "It's busy right now. Please try again in a moment",
     soundOn: "♪ Sound ON", soundOff: "♪ Sound OFF",
     creator: "Made by",
+    pfEdit: "✏️ Edit profile", pfEditTitle: "Edit profile", pfPass: "Edit passcode",
+    pfPassNote: "Enter the edit passcode from the プロフィール sheet in the spreadsheet (only needed once on this device).",
+    pfIcon: "Icon", pfPick: "Choose image", pfClearIcon: "Remove", pfPasteNote: "You can also copy an image and paste it here (Ctrl+V)",
+    pfText: "Description", pfSave: "Save", pfSaved: "Saved",
+    BAD_PASS: "Wrong passcode", LOCKED: "Too many attempts. Please wait about 10 minutes", BAD_ICON: "This image can't be used. Try another one",
+    pfBadUrl: "Links must start with https:// and be X, TikTok or YouTube",
     install: "📲 Add to Home Screen", migrate: "📲 Move to the app version without the banner (keeps your record)",
     installHow: code => `<b>iPhone</b>: Safari Share button (□↑) → "Add to Home Screen"<br><b>Android</b>: Chrome menu (︙) → "Add to Home screen"`
       + (code ? `<br><br>The home-screen app keeps its own data. After opening it, choose "Continue with a transfer code" and enter <b>${code}</b>.` : ""),
@@ -333,7 +383,9 @@ const mock = {
   find(id) { const rows = this.db(); const r = rows.find(x => x.id === id); if (!r) throw new Error("NOT_FOUND"); return [rows, r]; },
   getRecord(id) { return this.out(this.db().find(r => r.id === id)); },
   getAppUrl() { return location.href.split("#")[0]; },
-  getProfile() { return { text: "（ここにプロフィールが出ます）\nスプレッドシートの「プロフィール」シートで編集できます。", x: "https://x.com/example", tiktok: "https://www.tiktok.com/@example", youtube: "https://www.youtube.com/@example" }; },
+  getProfile() { try { const p = JSON.parse(lsGet("mock-profile")); if (p) return p; } catch (e) {} return { text: "（ここにプロフィールが出ます）", x: "", tiktok: "", youtube: "", icon: "" }; },
+  checkProfilePass(pass) { if (String(pass).toUpperCase() !== "TESTPASS") throw new Error("BAD_PASS"); return true; },
+  saveProfile(pass, p) { this.checkProfilePass(pass); lsSet("mock-profile", JSON.stringify(p)); return p; },
   restore(code) { const c = String(code).toUpperCase().replace(/[^A-Z0-9]/g, ""); return this.out(this.db().find(r => r.code === c.slice(0, 4) + "-" + c.slice(4))); },
   startTimer(id, nick, now, goal) {
     const rows = this.db(), hit = rows.find(r => r.id === id);
@@ -371,7 +423,7 @@ async function apiOnce(fn, ...args) {
   return new Promise((resolve, reject) => setTimeout(() => { try { resolve(mock[fn](...args)); } catch (e) { reject(e); } }, 400));
 }
 // 混雑で失敗したときは、少し間をあけて自動でやり直す（アプリ側のエラーはやり直さない）
-const APP_ERRORS = ["NOT_FOUND", "TOO_EARLY", "BAD_INPUT", "BAD_ID", "CODE_FAIL"];
+const APP_ERRORS = ["NOT_FOUND", "TOO_EARLY", "BAD_INPUT", "BAD_ID", "CODE_FAIL", "BAD_PASS", "LOCKED", "BAD_ICON", "BAD_FN"];
 async function api(fn, ...args) {
   for (let i = 0; ; i++) {
     try { return await apiOnce(fn, ...args); }
@@ -991,8 +1043,11 @@ $("migrateBtn").onclick = () => {
 let profile = null;
 function renderProfile() {
   const p = profile || {};
-  const has = !!(p.text || p.x || p.tiktok || p.youtube);
+  const has = !!(p.text || p.x || p.tiktok || p.youtube || p.icon) || !!lsGet("inochi-editpass");
   $("pfText").textContent = p.text || "";
+  const av = $("pfAvatar");
+  if (p.icon) { av.src = p.icon; av.style.display = ""; } else if (!/icon-192.png$/.test(av.src)) { av.src = "icon-192.png"; }
+  $("pfEditBtn").classList.toggle("hidden", !lsGet("inochi-editpass"));
   [["pfX", p.x], ["pfTiktok", p.tiktok], ["pfYoutube", p.youtube]].forEach(([id, url]) => {
     const ok = typeof url === "string" && /^https:\/\//.test(url);
     $(id).classList.toggle("hidden", !ok);
@@ -1008,6 +1063,97 @@ async function loadProfile() {
     lsSet("inochi-profile", JSON.stringify({ at: Date.now(), p: profile }));
     renderProfile();
   } catch (e) { /* 出せなくてもアプリは動く */ }
+}
+
+/* ---------- プロフィールの編集画面（住所の最後に ?edit、または「✏️ プロフィールを編集」） ---------- */
+let edIconData = "";
+const URL_OK = { edX: /^https:\/\/(www\.)?(x|twitter)\.com\//, edTiktok: /^https:\/\/(www\.|vt\.|vm\.)?tiktok\.com\//, edYoutube: /^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\// };
+function edSetIcon(data) {
+  edIconData = data || "";
+  $("edIcon").src = edIconData || "icon-192.png";
+}
+function edShowForm(unlocked) {
+  $("edPassBox").classList.toggle("hidden", unlocked);
+  $("edForm").classList.toggle("hidden", !unlocked);
+}
+function openEditor() {
+  const p = profile || {};
+  $("edText").value = p.text || ""; $("edX").value = p.x || ""; $("edTiktok").value = p.tiktok || ""; $("edYoutube").value = p.youtube || "";
+  $("edCount").textContent = `${$("edText").value.length}/300`;
+  edSetIcon(p.icon || "");
+  $("edPass").value = "";
+  $("edErr").textContent = "";
+  $("edSave").textContent = t("pfSave"); $("edSave").disabled = false;
+  edShowForm(!!lsGet("inochi-editpass"));
+  $("editModal").classList.remove("hidden");
+}
+$("pfEditBtn").onclick = openEditor;
+$("edClose").onclick = () => $("editModal").classList.add("hidden");
+$("edText").oninput = () => $("edCount").textContent = `${$("edText").value.length}/300`;
+$("edPick").onclick = () => $("edFile").click();
+$("edClearIcon").onclick = () => edSetIcon("");
+$("edFile").onchange = () => { const f = $("edFile").files[0]; if (f) edLoadImage(f); $("edFile").value = ""; };
+// 画像の貼り付け（編集画面を開いているときだけ）
+document.addEventListener("paste", e => {
+  if ($("editModal").classList.contains("hidden")) return;
+  const item = [...(e.clipboardData && e.clipboardData.items || [])].find(i => i.type.startsWith("image/"));
+  if (item) { e.preventDefault(); edLoadImage(item.getAsFile()); }
+});
+// 画像を真ん中で正方形に切り抜き、小さく（160px）してから保存する
+function edLoadImage(file) {
+  $("edErr").textContent = "";
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    const S = 160, c = document.createElement("canvas"); c.width = c.height = S;
+    const g = c.getContext("2d"), side = Math.min(img.naturalWidth, img.naturalHeight);
+    g.fillStyle = "#ffffff"; g.fillRect(0, 0, S, S);  // 透明な部分は白に
+    g.imageSmoothingQuality = "high";
+    g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, S, S);
+    let q = 0.88, data = c.toDataURL("image/jpeg", q);
+    while (data.length > 40000 && q > 0.4) { q -= 0.1; data = c.toDataURL("image/jpeg", q); }
+    URL.revokeObjectURL(url);
+    edSetIcon(data);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); $("edErr").textContent = t("BAD_ICON"); };
+  img.src = url;
+}
+$("edSave").onclick = async () => {
+  $("edErr").textContent = "";
+  const btn = $("edSave");
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = t("saving");
+  try {
+    // まずパスコード（初回だけ）
+    if (!lsGet("inochi-editpass")) {
+      const pass = $("edPass").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      await apiOnce("checkProfilePass", pass);
+      lsSet("inochi-editpass", pass);
+      edShowForm(true);
+      return;  // フォームを見せてから、もう一度「保存する」
+    }
+    for (const id of ["edX", "edTiktok", "edYoutube"]) {
+      const v = $(id).value.trim();
+      if (v && !URL_OK[id].test(v)) { $("edErr").textContent = t("pfBadUrl"); $(id).focus(); return; }
+    }
+    const p = { text: $("edText").value.slice(0, 300), x: $("edX").value.trim(), tiktok: $("edTiktok").value.trim(), youtube: $("edYoutube").value.trim(), icon: edIconData };
+    profile = await apiOnce("saveProfile", lsGet("inochi-editpass"), p);
+    lsSet("inochi-profile", JSON.stringify({ at: Date.now(), p: profile }));
+    renderProfile();
+    btn.textContent = t("pfSaved");
+    setTimeout(() => $("editModal").classList.add("hidden"), 700);
+  } catch (e) {
+    const m = String(e && e.message ? e.message : e);
+    if (m.includes("BAD_PASS")) { lsDel("inochi-editpass"); edShowForm(false); }
+    $("edErr").textContent = errText(e);
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = t("pfSave"); }, 900);
+  }
+};
+// 住所に ?edit がついていたら編集画面を開き、住所からは消す
+if (/[?&]edit\b/.test(location.search)) {
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  setTimeout(openEditor, 300);
 }
 
 // 設定画面とカウントダウン中だけ「ホーム画面に置く」などを表示。プロフィールはどの画面でも下に出す
